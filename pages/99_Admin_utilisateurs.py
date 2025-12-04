@@ -185,4 +185,3 @@ else:
         config["credentials"]["usernames"] = users
         st.success(f"Utilisateur `{delete_user}` supprimé.")
         afficher_bloc_secrets(config)
-        
