@@ -41,27 +41,35 @@ USERS = {
 def login():
     st.sidebar.header("🔐 Connexion")
 
+    # Initialisation
     if "auth_user" not in st.session_state:
         st.session_state["auth_user"] = None
+        st.session_state["auth_failed"] = False
 
-    if st.session_state["auth_user"] is None:
-        username = st.sidebar.text_input("Utilisateur")
-        password = st.sidebar.text_input("Mot de passe", type="password")
-        if st.sidebar.button("Se connecter"):
-            if username in USERS and USERS[username]["password"] == password:
-                st.session_state["auth_user"] = username
-                st.sidebar.success(f"Connecté en tant que {username}")
-            else:
-                st.sidebar.error("Identifiants incorrects.")
-        st.stop()
-    else:
-        user = st.session_state["auth_user"]
-        st.sidebar.success(f"Connecté : {user}")
-        if st.sidebar.button("Se déconnecter"):
-            st.session_state["auth_user"] = None
-            st.experimental_rerun()
+    # Si déjà connecté → ne pas bloquer
+    if st.session_state["auth_user"]:
+        return st.session_state["auth_user"]
 
-    return st.session_state["auth_user"]
+    # Formulaire de connexion
+    username = st.sidebar.text_input("Utilisateur", key="user_input")
+    password = st.sidebar.text_input("Mot de passe", type="password", key="pass_input")
+
+    if st.sidebar.button("Se connecter"):
+        if username in USERS and USERS[username]["password"] == password:
+            st.session_state["auth_user"] = username
+            st.session_state["auth_failed"] = False
+            st.rerun()
+        else:
+            st.session_state["auth_failed"] = True
+
+    # Message d'erreur en cas d'échec
+    if st.session_state["auth_failed"]:
+        st.sidebar.error("Identifiants incorrects.")
+
+    # NE PAS STOPPER L'APP ! → on affiche un message et on laisse vivre
+    st.write("Veuillez vous connecter depuis la barre latérale.")
+    st.stop()
+
 
 
 # -----------------------------
