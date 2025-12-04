@@ -47,8 +47,8 @@ def list_files_in_folder(path):
 # Liste les fichiers dans le dossier /BI_PLUS/clients
 list_files_in_folder("/BI_PLUS/clients")
 
-# Chemin vers le fichier Excel dans Dropbox
-excel_path = "/BI_PLUS/clients/client_0001/mon_fichier.xlsx"
+# Le chemin du fichier dans Dropbox
+excel_path = "/BI_PLUS/clients/client_0001/dossiers/2023/essai_fec.xlsx"
 
 # Télécharger le fichier depuis Dropbox
 try:
@@ -60,4 +60,3 @@ except dropbox.exceptions.ApiError as e:
     st.error(f"Erreur lors du téléchargement du fichier : {e}")
 except Exception as e:
     st.error(f"Erreur inconnue : {e}")
-
