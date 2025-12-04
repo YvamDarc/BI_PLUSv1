@@ -12,7 +12,7 @@ st.set_page_config(page_title="BI+ – Test Dropbox", layout="wide")
 # -----------------------------
 # PARAMÈTRES DROBOX (POC)
 # -----------------------------
-DROPBOX_TOKEN = "TON_TOKEN_DROPBOX_ICI"  # TODO: à remplacer par ton vrai token
+DROPBOX_TOKEN = "sl.u.AGKEzGp3_THAY3NpbIqujcRy9Tvah_6Ja0sDFbU0UGJsi7VN52AyI9Mf9sC8k3GNINmgrUqX2D91t6LugQe0dhQJaqLpAO3jXhXj9zL0VcB1c-ycaRXyhFhhkifSBr8MrMglevkUJE5TSMWbp0O6CcYzuuHCyT1_u5hBA9lUQwgI74K5nxgForiT4VcQdG_jhVmKouNaX2Qse6xJhWTPaH0G5lSJNqSomF73mJAYGzQq2EHxgny1gBDfz35FSidmr6LTI6IMOBXWxfexM5Qnb-KrRkHMWcPAKUZ2GsUGABjaCFJwUY_X7xEpfaJ50DhuXQeblXlfCsK7PU6GYJauNnFswSLN8trTsL8J_9HTjFRAOd9kDu9DfyvISnftSNV9oU3asMcM7-XPPg8BgK5Mp3Oo3V1Ka6ZMc-JDxGlEiz5JxeZ6_bA531mm-AgdWDKqPTTbUrgQFEr0A--6t1dUjDYoPwdURanGqos0PfURcjjhP5LrfWPzAl-l6fdKmLepQBBqUU0VUKkI5S7qMIk6z60zL4TgEtRnq_iLRejMATW8eNRQM7vGTPmNIpj0DVGKXoKarTmJly9XbsmQYFlhMzy8yNPNMn_JbUdWDH9q3ABrsaNi7a7TRlkTIHw5ovgU2nj_B3LdTc78dH7DXmRun6mhfhs6S6gfum2jnK15kUaLbzFRSd8vePvME8tTL8aFgJsVrK7LFWrVZIiyic7WqVncAmAQnUIznRoiRzYyiQaaOFyJLfb3IA7tvLihDa8G6kXyw8KNAmBqYab57efuvZ-LU7pRTPTq8pFGOCF8DVKPgswowL5ZwQ8_c3NvwcXf2wEdN0vTq18uv5kFE6MfkbZfyi_566p8UuBchK7g7lKiU1MrN16c1PaJNheQYhy1q6GuwYmUZlp6Q5eLa1fvXFyyXT7y6CvBabCG2BXf9I3hFevgjzjgyRMLA2iGCrmiuMLUvECpm6V1c2PdB-0kFSd08YKTUP1Mxmf7nEpnMEJcrkrUph_ZpmImQup618QlfJ-FmZMYeRNs1nHwBqi1HAKaOUqQEcgb83gsQLC396n99cEracQgmEz6OoxdebfKqt-gQAvRJxGo1kog_y3p6FGFAe6W6o76geeiqhnqLizYEe2bsbCApjRcpHQDvlDJOI9GESPDvijznQ8ZhwQXJBYe4WQpdDExe4A_F4iQQ9tnjUzlZG6i08KKywfO2s2XNDow9Uh_DFvVFyhsqNXckHLB1yeFISREkZ1tar133vLWmPiqVGcGYF9rB07SYIfgEZs"  # TODO: à remplacer par ton vrai token
 CLIENT_FOLDER = "/BI_PLUS/clients/client_0001"
 EXCEL_PATH = CLIENT_FOLDER + "/dossiers/2023/essai_fec.xlsx"
 NOTES_PATH = CLIENT_FOLDER + "/notes.md"
