@@ -2,16 +2,13 @@ import streamlit as st
 import yaml
 import streamlit_authenticator as stauth
 
+# Configuration de la page
 st.set_page_config(page_title="BI+ – Connexion", layout="centered")
 
-# Charger la config d'auth depuis les secrets
+# Charger la config d'auth depuis les secrets (YAML embarqué)
 config = yaml.safe_load(st.secrets["auth"]["config"])
 
-# (Tu peux commenter ces lignes une fois que tout marche)
-st.write("CONFIG TROUVÉ :", "auth" in st.secrets)
-st.write("UTILISATEURS CHARGÉS :", list(config["credentials"]["usernames"].keys()))
-
-# Créer l'authenticator
+# Initialiser l'authenticator
 authenticator = stauth.Authenticate(
     config["credentials"],
     config["cookie"]["name"],
@@ -19,12 +16,11 @@ authenticator = stauth.Authenticate(
     config["cookie"]["expiry_days"]
 )
 
+# Interface de connexion
 st.title("🔐 BI+ – Connexion")
-
-# Afficher le formulaire de connexion dans la zone principale
 authenticator.login(location="main")
 
-# Récupérer les infos de session
+# Récupération de la session
 name = st.session_state.get("name")
 auth_status = st.session_state.get("authentication_status")
 username = st.session_state.get("username")
@@ -35,7 +31,6 @@ if auth_status is False:
 elif auth_status is None:
     st.warning("Veuillez entrer vos identifiants.")
 elif auth_status:
-    # Bouton de déconnexion dans la sidebar
     authenticator.logout("Se déconnecter", "sidebar")
     st.success(f"Bienvenue {name} !")
     st.switch_page("pages/1_Accueil.py")
