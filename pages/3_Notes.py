@@ -2,11 +2,38 @@ import streamlit as st
 import yaml
 import streamlit_authenticator as stauth
 import dropbox
+import requests
+import pandas as pd
+from io import BytesIO
 
-# Configurer la page Streamlit
-st.set_page_config(page_title="Notes – BI+", layout="wide")
+# Fonction pour récupérer un access token via le refresh token
+def get_fresh_access_token():
+    """
+    Récupère un nouveau access_token via le refresh_token Dropbox.
+    """
+    token_url = "https://api.dropboxapi.com/oauth2/token"
 
-# Charger la configuration depuis les secrets Streamlit
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": st.secrets["DROPBOX_REFRESH_TOKEN"],
+        "client_id": st.secrets["DROPBOX_CLIENT_ID"],
+        "client_secret": st.secrets["DROPBOX_CLIENT_SECRET"],
+    }
+
+    response = requests.post(token_url, data=data)
+    response.raise_for_status()
+    return response.json()["access_token"]
+
+# Crée un client Dropbox avec un access token valide
+@st.cache_resource(show_spinner=False)
+def get_dropbox_client():
+    """
+    Crée un client Dropbox toujours valide.
+    """
+    access_token = get_fresh_access_token()
+    return dropbox.Dropbox(access_token)
+
+# Chargement de la configuration
 config = yaml.safe_load(st.secrets["auth"]["config"])
 
 # Instancier l'authentificateur
@@ -20,7 +47,7 @@ authenticator = stauth.Authenticate(
 # Authentification de l'utilisateur
 if "authentication_status" not in st.session_state or not st.session_state["authentication_status"]:
     st.warning("Vous devez vous connecter.")
-    st.stop()  # Arrêter l'exécution si l'utilisateur n'est pas connecté
+    st.stop()
 
 # Authentification réussie
 authenticator.logout("Déconnexion", "sidebar")
@@ -45,20 +72,17 @@ if "dropbox_folders" not in user_info:
 role = user_info["role"]
 folders = user_info["dropbox_folders"]
 
+# Sélectionner le premier dossier de la liste
+folder = folders[0]
+
 # Afficher les informations de l'utilisateur pour déboguer
-st.write(f"Dossiers Dropbox de l'utilisateur {username}: {folders}")
-
-# Sélectionner le premier dossier de la liste (ou un autre selon tes besoins)
-folder = folders[0]  # Prendre le premier dossier de la liste
-
-# Afficher le dossier sélectionné
-st.write(f"Dossier sélectionné : {folder}")
+st.write(f"Dossier Dropbox de l'utilisateur {username}: {folder}")
 
 # Chemin vers le fichier des notes dans Dropbox
 NOTES_PATH = folder + "/notes.md"
 
 # Créer un client Dropbox
-dbx = dropbox.Dropbox(st.secrets["DROPBOX_TOKEN"])
+dbx = get_dropbox_client()
 
 # Titre de la page
 st.title("📝 Notes")
