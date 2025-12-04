@@ -1,4 +1,6 @@
 streamlit
+streamlit-authenticator
 dropbox
 pandas
+pyyaml
 openpyxl
