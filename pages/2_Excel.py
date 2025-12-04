@@ -1,6 +1,4 @@
 import streamlit as st
-import yaml
-import streamlit_authenticator as stauth
 import dropbox
 import requests
 import pandas as pd
@@ -52,12 +50,12 @@ st.title("📊 Données Excel")
 dbx = get_dropbox_client()
 
 # Récupérer le chemin du fichier Excel dans Dropbox
-excel_path = f"{folder}/dossier/2023/essai_fec.xlsx"  # Remplace ce chemin selon ton organisation
+excel_path = f"{folder}/dossiers/2023/essai_fec.xlsx"  # Remplace ce chemin selon ton organisation
 
 # Tentative de téléchargement du fichier depuis Dropbox
 try:
     metadata, res = dbx.files_download(excel_path)
-    # Lire le contenu Excel
+    # Lire le contenu Excel avec pandas
     df = pd.read_excel(BytesIO(res.content))
     st.dataframe(df, use_container_width=True)
 except dropbox.exceptions.ApiError as e:
