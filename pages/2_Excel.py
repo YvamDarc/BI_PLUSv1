@@ -25,7 +25,7 @@ authenticator.logout("Déconnexion", "sidebar")
 username = st.session_state["username"]
 user_info = config["credentials"]["usernames"][username]
 
-folder = user_info["dropbox_folder"]
+folder = st.session_state["selected_folder"]
 EXCEL_PATH = folder + "/dossiers/2023/essai_fec.xlsx"
 
 dbx = dropbox.Dropbox(st.secrets["DROPBOX_TOKEN"])
