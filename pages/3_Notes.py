@@ -3,6 +3,7 @@ import yaml
 import streamlit_authenticator as stauth
 import dropbox
 
+# Configurer la page Streamlit
 st.set_page_config(page_title="Notes – BI+", layout="wide")
 
 # Charger la configuration depuis les secrets Streamlit
@@ -35,17 +36,23 @@ if username not in config["credentials"]["usernames"]:
 # Récupérer les informations de l'utilisateur
 user_info = config["credentials"]["usernames"][username]
 
-# Vérifier que 'dropbox_folder' existe dans l'info utilisateur
-if "dropbox_folder" not in user_info:
-    st.error(f"Le dossier Dropbox n'est pas défini pour l'utilisateur {username}.")
+# Vérifier que 'dropbox_folders' existe dans l'info utilisateur
+if "dropbox_folders" not in user_info:
+    st.error(f"Les dossiers Dropbox ne sont pas définis pour l'utilisateur {username}.")
     st.stop()
 
 # Récupérer le rôle et le dossier Dropbox de l'utilisateur
 role = user_info["role"]
-folder = user_info["dropbox_folder"]
+folders = user_info["dropbox_folders"]
 
 # Afficher les informations de l'utilisateur pour déboguer
-st.write(f"Dossier Dropbox de l'utilisateur {username} : {folder}")
+st.write(f"Dossiers Dropbox de l'utilisateur {username}: {folders}")
+
+# Sélectionner le premier dossier de la liste (ou un autre selon tes besoins)
+folder = folders[0]  # Prendre le premier dossier de la liste
+
+# Afficher le dossier sélectionné
+st.write(f"Dossier sélectionné : {folder}")
 
 # Chemin vers le fichier des notes dans Dropbox
 NOTES_PATH = folder + "/notes.md"
