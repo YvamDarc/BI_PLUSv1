@@ -4,10 +4,10 @@ import streamlit_authenticator as stauth
 
 st.set_page_config(page_title="BI+ – Admin utilisateurs", layout="wide")
 
-# Charger la config actuelle depuis les secrets
+# Charger la config depuis les secrets
 config = yaml.safe_load(st.secrets["auth"]["config"])
 
-# Recréer l'authenticator (comme dans les autres pages)
+# Authenticator
 authenticator = stauth.Authenticate(
     config["credentials"],
     config["cookie"]["name"],
@@ -15,19 +15,18 @@ authenticator = stauth.Authenticate(
     config["cookie"]["expiry_days"]
 )
 
-# Vérifier que quelqu'un est connecté, sinon retour login
+# Sécurité : accès seulement si connecté
 if "authentication_status" not in st.session_state or not st.session_state["authentication_status"]:
     st.switch_page("app.py")
 
 username = st.session_state["username"]
 user_info = config["credentials"]["usernames"][username]
 
-# Vérifier le rôle : seulement admin
+# Sécurité : accès réservé admin
 if user_info.get("role") != "admin":
-    st.error("⛔ Cette page est réservée à l'administrateur.")
+    st.error("⛔ Accès réservé à l'administrateur.")
     st.stop()
 
-# Bouton de déconnexion
 authenticator.logout("Se déconnecter", "sidebar")
 
 st.title("🛠 Administration des utilisateurs BI+")
@@ -35,43 +34,20 @@ st.title("🛠 Administration des utilisateurs BI+")
 st.markdown(
     """
     Cette page permet de :
-    - Voir la liste des utilisateurs configurés
-    - Ajouter un nouvel utilisateur
-    - Modifier un utilisateur existant (dont le mot de passe)
-    - Supprimer un utilisateur
-
-    ⚠️ Après chaque modification, il faudra :
-    1. Copier le bloc `[auth]` généré,
-    2. Le coller dans les *Secrets* Streamlit,
-    3. Sauvegarder pour redémarrer l'application.
+    - Gérer la liste des utilisateurs
+    - Ajouter un utilisateur (avec dossiers autorisés)
+    - Modifier un utilisateur existant
+    - Changer les mots de passe
+    - Supprimer des utilisateurs
+    - Générer automatiquement le bloc `[auth]` pour les Secrets Streamlit
     """
 )
 
 users = config["credentials"]["usernames"]
 
-# ----------------------------------------------------
-# 1. Liste des utilisateurs existants
-# ----------------------------------------------------
-st.subheader("👥 Utilisateurs actuels")
-
-cols = st.columns([1, 2, 2, 1, 3])
-cols[0].markdown("**Username**")
-cols[1].markdown("**Nom**")
-cols[2].markdown("**Email**")
-cols[3].markdown("**Rôle**")
-cols[4].markdown("**Dossier Dropbox**")
-
-for u, data in users.items():
-    cols = st.columns([1, 2, 2, 1, 3])
-    cols[0].write(u)
-    cols[1].write(data.get("name", ""))
-    cols[2].write(data.get("email", ""))
-    cols[3].write(data.get("role", ""))
-    cols[4].write(data.get("dropbox_folder", ""))
-
-st.markdown("---")
-
-# Petite fonction utilitaire pour générer un bloc secrets
+# -------------------------------------------------------
+#  UTILITAIRE : Génération du bloc secrets
+# -------------------------------------------------------
 def afficher_bloc_secrets(config):
     yaml_str = yaml.safe_dump(
         config,
@@ -79,107 +55,133 @@ def afficher_bloc_secrets(config):
         allow_unicode=True
     )
     secrets_block = '[auth]\nconfig = """\n' + yaml_str + '\n"""'
-    st.markdown("### 🔐 Nouveau bloc à copier dans les *Secrets* Streamlit")
+    st.markdown("### 🔐 Nouveau bloc à copier dans Streamlit Secrets")
     st.code(secrets_block, language="toml")
-    st.info(
-        "Copiez ce bloc, remplacez votre section `[auth]` actuelle dans les `Secrets` Streamlit, "
-        "puis sauvegardez pour redémarrer l'application."
-    )
+    st.info("Copiez ce bloc dans les Secrets Streamlit et sauvegardez pour redémarrer l'application.")
 
-# ----------------------------------------------------
-# 2. Ajout d'un nouvel utilisateur
-# ----------------------------------------------------
-st.subheader("➕ Ajouter un nouvel utilisateur")
 
-with st.form("add_user_form"):
-    new_username = st.text_input("Username (identifiant de connexion)")
+# -------------------------------------------------------
+# 1. Liste des utilisateurs
+# -------------------------------------------------------
+st.subheader("👥 Utilisateurs existants")
+
+cols = st.columns([1, 2, 2, 1, 3])
+cols[0].markdown("**Username**")
+cols[1].markdown("**Nom**")
+cols[2].markdown("**Email**")
+cols[3].markdown("**Rôle**")
+cols[4].markdown("**Dossiers Dropbox**")
+
+for u, data in users.items():
+    folders = ", ".join(data.get("dropbox_folders", []))
+    row = st.columns([1, 2, 2, 1, 3])
+    row[0].write(u)
+    row[1].write(data.get("name", ""))
+    row[2].write(data.get("email", ""))
+    row[3].write(data.get("role", ""))
+    row[4].write(folders)
+
+st.markdown("---")
+
+# -------------------------------------------------------
+# 2. Ajouter un utilisateur
+# -------------------------------------------------------
+st.subheader("➕ Ajouter un utilisateur")
+
+with st.form("add_user"):
+    new_username = st.text_input("Username")
     new_name = st.text_input("Nom complet")
     new_email = st.text_input("Email")
-    new_role = st.selectbox("Rôle", ["admin", "viewer"], key="add_role")
-    new_dropbox_folder = st.text_input("Dossier Dropbox associé", value="/BI_PLUS/clients/client_xxxx")
+    new_role = st.selectbox("Rôle", ["admin", "viewer"])
+    new_folders = st.text_area(
+        "Dossiers Dropbox autorisés (un par ligne)",
+        placeholder="/BI_PLUS/clients/client_0001\n/BI_PLUS/clients/client_0002"
+    )
     new_password = st.text_input("Mot de passe", type="password")
     new_password_confirm = st.text_input("Confirmer le mot de passe", type="password")
+    add_submit = st.form_submit_button("Créer utilisateur")
 
-    submitted_add = st.form_submit_button("✅ Ajouter l'utilisateur")
-
-if submitted_add:
+if add_submit:
     if not new_username or not new_password:
-        st.error("Username et mot de passe sont obligatoires.")
+        st.error("Username et mot de passe obligatoires.")
     elif new_password != new_password_confirm:
-        st.error("Les deux mots de passe ne correspondent pas.")
+        st.error("Les mots de passe ne correspondent pas.")
     elif new_username in users:
         st.error("Ce username existe déjà.")
     else:
-        hashed_pwd = stauth.Hasher().hash(new_password)
+        folder_list = [f.strip() for f in new_folders.split("\n") if f.strip()]
+        hash_pwd = stauth.Hasher().hash(new_password)
+
         config["credentials"]["usernames"][new_username] = {
             "email": new_email,
             "name": new_name,
-            "password": hashed_pwd,
+            "password": hash_pwd,
             "role": new_role,
-            "dropbox_folder": new_dropbox_folder,
+            "dropbox_folders": folder_list,
         }
-        st.success(f"Utilisateur `{new_username}` ajouté à la configuration.")
+
+        st.success(f"Utilisateur `{new_username}` ajouté.")
         afficher_bloc_secrets(config)
 
 st.markdown("---")
 
-# ----------------------------------------------------
-# 3. Modification d'un utilisateur existant
-# ----------------------------------------------------
-st.subheader("✏️ Modifier un utilisateur existant")
+# -------------------------------------------------------
+# 3. Modifier un utilisateur
+# -------------------------------------------------------
+st.subheader("✏️ Modifier un utilisateur")
 
-usernames_list = list(users.keys())
-selected_user = st.selectbox("Choisir l'utilisateur à modifier", usernames_list, key="edit_select")
+selected_user = st.selectbox("Choisir un utilisateur", list(users.keys()))
 
 if selected_user:
-    u_data = users[selected_user]
+    u = users[selected_user]
 
-    with st.form("edit_user_form"):
-        edit_name = st.text_input("Nom complet", value=u_data.get("name", ""))
-        edit_email = st.text_input("Email", value=u_data.get("email", ""))
-        edit_role = st.selectbox("Rôle", ["admin", "viewer"], index=0 if u_data.get("role") == "admin" else 1, key="edit_role")
-        edit_dropbox = st.text_input("Dossier Dropbox associé", value=u_data.get("dropbox_folder", ""))
+    with st.form("edit_user"):
+        edit_name = st.text_input("Nom", value=u.get("name", ""))
+        edit_email = st.text_input("Email", value=u.get("email", ""))
+        edit_role = st.selectbox("Rôle", ["admin", "viewer"], index=0 if u.get("role") == "admin" else 1)
+        edit_folders = st.text_area(
+            "Dossiers Dropbox autorisés",
+            value="\n".join(u.get("dropbox_folders", []))
+        )
 
-        st.markdown("#### 🔑 Changer le mot de passe (optionnel)")
-        edit_new_password = st.text_input("Nouveau mot de passe (laisser vide pour ne pas changer)", type="password")
-        edit_new_password_confirm = st.text_input("Confirmer le nouveau mot de passe", type="password")
+        st.markdown("#### 🔑 Modifier le mot de passe (optionnel)")
+        edit_pwd = st.text_input("Nouveau mot de passe", type="password")
+        edit_pwd2 = st.text_input("Confirmer le mot de passe", type="password")
 
-        submitted_edit = st.form_submit_button("💾 Enregistrer les modifications")
+        edit_submit = st.form_submit_button("Enregistrer")
 
-    if submitted_edit:
-        if edit_new_password or edit_new_password_confirm:
-            if edit_new_password != edit_new_password_confirm:
-                st.error("Les deux nouveaux mots de passe ne correspondent pas.")
+    if edit_submit:
+        if edit_pwd or edit_pwd2:
+            if edit_pwd != edit_pwd2:
+                st.error("Les nouveaux mots de passe ne correspondent pas.")
+                st.stop()
             else:
-                new_hash = stauth.Hasher().hash(edit_new_password)
-                u_data["password"] = new_hash
+                u["password"] = stauth.Hasher().hash(edit_pwd)
 
-        u_data["name"] = edit_name
-        u_data["email"] = edit_email
-        u_data["role"] = edit_role
-        u_data["dropbox_folder"] = edit_dropbox
+        u["name"] = edit_name
+        u["email"] = edit_email
+        u["role"] = edit_role
+        u["dropbox_folders"] = [f.strip() for f in edit_folders.split("\n") if f.strip()]
 
-        config["credentials"]["usernames"][selected_user] = u_data
+        config["credentials"]["usernames"][selected_user] = u
+
         st.success(f"Utilisateur `{selected_user}` mis à jour.")
         afficher_bloc_secrets(config)
 
 st.markdown("---")
 
-# ----------------------------------------------------
-# 4. Suppression d'un utilisateur
-# ----------------------------------------------------
+# -------------------------------------------------------
+# 4. Suppression d’un utilisateur
+# -------------------------------------------------------
 st.subheader("🗑 Supprimer un utilisateur")
 
-user_to_delete = st.selectbox("Choisir l'utilisateur à supprimer", usernames_list, key="delete_select")
+delete_user = st.selectbox("Sélectionner l’utilisateur à supprimer", list(users.keys()), key="delete_user")
 
-if user_to_delete:
-    if user_to_delete == username:
-        st.warning("Vous ne pouvez pas supprimer l'utilisateur actuellement connecté.")
-    elif user_to_delete == "admin":
-        st.warning("Par sécurité, la suppression de l'utilisateur 'admin' est bloquée.")
-    else:
-        if st.button(f"⚠️ Confirmer la suppression de `{user_to_delete}`"):
-            users.pop(user_to_delete, None)
-            config["credentials"]["usernames"] = users
-            st.success(f"Utilisateur `{user_to_delete}` supprimé de la configuration.")
-            afficher_bloc_secrets(config)
+if delete_user == "admin":
+    st.warning("Impossible de supprimer l'utilisateur admin.")
+else:
+    if st.button(f"⚠️ Supprimer {delete_user}"):
+        users.pop(delete_user)
+        config["credentials"]["usernames"] = users
+        st.success(f"Utilisateur `{delete_user}` supprimé.")
+        afficher_bloc_secrets(config)
