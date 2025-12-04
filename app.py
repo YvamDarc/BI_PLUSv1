@@ -1,57 +1,36 @@
 import streamlit as st
 import yaml
+import streamlit_authenticator as stauth
 
-st.set_page_config(page_title="Accueil BI+", layout="centered")
+# Configuration de la page
+st.set_page_config(page_title="BI+ – Connexion", layout="centered")
 
-# Charger config utilisateurs
+# Charger la config d'auth depuis les secrets (YAML embarqué)
 config = yaml.safe_load(st.secrets["auth"]["config"])
 
-# Sécurité : vérifier authentification
-if "authentication_status" not in st.session_state or not st.session_state["authentication_status"]:
-    st.switch_page("app.py")
-
-username = st.session_state["username"]
-user_info = config["credentials"]["usernames"][username]
-role = user_info.get("role", "viewer")
-
-st.title("🏠 Accueil BI+")
-
-# ------------------------------------------
-# DÉTERMINATION DES DOSSIERS ACCESSIBLES
-# ------------------------------------------
-if role == "admin":
-    # Admin = accès à tous les dossiers de tous les utilisateurs
-    all_folders = []
-    for u, info in config["credentials"]["usernames"].items():
-        all_folders.extend(info.get("dropbox_folders", []))
-
-    folders = sorted(set(all_folders))
-else:
-    # Viewer = seulement ses dossiers autorisés
-    folders = user_info.get("dropbox_folders", [])
-
-if not folders:
-    st.error("Aucun dossier Dropbox autorisé pour cet utilisateur.")
-    st.stop()
-
-# ------------------------------------------
-# SELECTEUR DE DOSSIER
-# ------------------------------------------
-if "selected_folder" not in st.session_state:
-    st.session_state["selected_folder"] = folders[0]
-
-selected_folder = st.selectbox(
-    "📁 Sélection du dossier client",
-    folders,
-    index=folders.index(st.session_state["selected_folder"])
+# Initialiser l'authenticator
+authenticator = stauth.Authenticate(
+    config["credentials"],
+    config["cookie"]["name"],
+    config["cookie"]["key"],
+    config["cookie"]["expiry_days"]
 )
 
-st.session_state["selected_folder"] = selected_folder
+# Interface de connexion
+st.title("🔐 BI+ – Connexion")
+authenticator.login(location="main")
 
-st.success(f"📂 Dossier actif : `{selected_folder}`")
+# Récupération de la session
+name = st.session_state.get("name")
+auth_status = st.session_state.get("authentication_status")
+username = st.session_state.get("username")
 
-st.markdown("---")
-
-# Menu / boutons pour accès rapide
-st.subheader("📊 Accès aux modules")
-st.write("Utilisez la barre latérale pour accéder aux analyses et imports.")
+# Gestion des états de connexion
+if auth_status is False:
+    st.error("Identifiants incorrects.")
+elif auth_status is None:
+    st.warning("Veuillez entrer vos identifiants.")
+elif auth_status:
+    authenticator.logout("Se déconnecter", "sidebar")
+    st.success(f"Bienvenue {name} !")
+    st.switch_page("pages/1_Accueil.py")
