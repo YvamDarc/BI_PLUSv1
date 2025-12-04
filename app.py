@@ -1,7 +1,13 @@
 import streamlit as st
 import yaml
 import streamlit_authenticator as stauth
-print(stauth.Hasher(["admin123"]).generate())
+import streamlit_authenticator as stauth
+
+password = "admin123"
+hashed_password = stauth.Hasher().hash(password)
+
+print(hashed_password)
+
 st.set_page_config(page_title="BI+ – Connexion", layout="centered")
 
 # Charger le fichier config depuis Streamlit Secrets
