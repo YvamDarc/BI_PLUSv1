@@ -7,6 +7,7 @@ st.set_page_config(page_title="BI+ – Connexion", layout="centered")
 # Charger le fichier config depuis Streamlit Secrets
 config = yaml.safe_load(st.secrets["auth"]["config"])
 
+
 # Instantiate authenticator
 authenticator = stauth.Authenticate(
     config["credentials"],
