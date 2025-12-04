@@ -35,3 +35,14 @@ except dropbox.exceptions.AuthError as e:
     st.error(f"Échec de l'authentification Dropbox : {e}")
 except Exception as e:
     st.error(f"Erreur inconnue lors de la connexion à Dropbox : {e}")
+
+def list_files_in_folder(path):
+    dbx = get_dropbox_client()
+    result = dbx.files_list_folder(path)
+    
+    st.write(f"Fichiers dans le dossier {path} :")
+    for entry in result.entries:
+        st.write(f"- {entry.name}")
+
+# Liste les fichiers dans le dossier /BI_PLUS/clients
+list_files_in_folder("/BI_PLUS/clients")
