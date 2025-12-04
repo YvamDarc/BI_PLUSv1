@@ -17,16 +17,17 @@ authenticator = stauth.Authenticate(
 
 st.title("🔐 BI+ – Connexion")
 
-name, auth_status, username = authenticator.login("Se connecter", "main")
+authenticator.login(location="main")
+
+name = st.session_state.get("name")
+auth_status = st.session_state.get("authentication_status")
+username = st.session_state.get("username")
 
 
-# ---------- LOGIQUE ----------
 if auth_status is False:
     st.error("Identifiants incorrects.")
-
 elif auth_status is None:
     st.warning("Veuillez entrer vos identifiants.")
-
 elif auth_status:
     authenticator.logout("Se déconnecter", "sidebar")
     st.success(f"Bienvenue {name} !")
