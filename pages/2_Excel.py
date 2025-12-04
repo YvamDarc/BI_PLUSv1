@@ -2,39 +2,65 @@ import streamlit as st
 import yaml
 import streamlit_authenticator as stauth
 import dropbox
+import requests
 import pandas as pd
 from io import BytesIO
 
-st.set_page_config(page_title="Excel – BI+", layout="wide")
+# Fonction pour récupérer un access token via le refresh token
+def get_fresh_access_token():
+    """
+    Récupère un nouveau access_token via le refresh_token Dropbox.
+    """
+    token_url = "https://api.dropboxapi.com/oauth2/token"
 
-config = yaml.safe_load(st.secrets["auth"]["config"])
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": st.secrets["DROPBOX_REFRESH_TOKEN"],
+        "client_id": st.secrets["DROPBOX_CLIENT_ID"],
+        "client_secret": st.secrets["DROPBOX_CLIENT_SECRET"],
+    }
 
-authenticator = stauth.Authenticate(
-    config["credentials"],
-    config["cookie"]["name"],
-    config["cookie"]["key"],
-    config["cookie"]["expiry_days"]
-)
+    response = requests.post(token_url, data=data)
+    response.raise_for_status()
+    return response.json()["access_token"]
 
-# Auth
+# Crée un client Dropbox avec un access token valide
+@st.cache_resource(show_spinner=False)
+def get_dropbox_client():
+    """
+    Crée un client Dropbox toujours valide.
+    """
+    access_token = get_fresh_access_token()
+    return dropbox.Dropbox(access_token)
+
+# Assurer que l'utilisateur est connecté
 if "authentication_status" not in st.session_state or not st.session_state["authentication_status"]:
-    st.switch_page("app.py")
+    st.warning("Vous devez vous connecter.")
+    st.stop()
 
-authenticator.logout("Déconnexion", "sidebar")
-
-username = st.session_state["username"]
-user_info = config["credentials"]["usernames"][username]
+# Sélectionner le dossier à utiliser
+if "selected_folder" not in st.session_state:
+    st.error("Aucun dossier sélectionné. Retournez à l'accueil.")
+    st.stop()
 
 folder = st.session_state["selected_folder"]
-EXCEL_PATH = folder + "/dossiers/2023/essai_fec.xlsx"
 
-dbx = dropbox.Dropbox(st.secrets["DROPBOX_TOKEN"])
+# Affichage du titre
+st.title("📊 Données Excel")
 
-st.title("📊 Excel – Données test")
+# Récupérer le client Dropbox
+dbx = get_dropbox_client()
 
+# Récupérer le chemin du fichier Excel dans Dropbox
+excel_path = f"{folder}/dossier/2023/essai_fec.xlsx"  # Remplace ce chemin selon ton organisation
+
+# Tentative de téléchargement du fichier depuis Dropbox
 try:
-    meta, res = dbx.files_download(EXCEL_PATH)
+    metadata, res = dbx.files_download(excel_path)
+    # Lire le contenu Excel
     df = pd.read_excel(BytesIO(res.content))
     st.dataframe(df, use_container_width=True)
+except dropbox.exceptions.ApiError as e:
+    st.error(f"Erreur lors du téléchargement du fichier : {e}")
 except Exception as e:
-    st.error(f"Erreur : {e}")
+    st.error(f"Erreur inconnue : {e}")
