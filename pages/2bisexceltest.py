@@ -46,3 +46,18 @@ def list_files_in_folder(path):
 
 # Liste les fichiers dans le dossier /BI_PLUS/clients
 list_files_in_folder("/BI_PLUS/clients")
+
+# Chemin vers le fichier Excel dans Dropbox
+excel_path = "/BI_PLUS/clients/client_0001/mon_fichier.xlsx"
+
+# Télécharger le fichier depuis Dropbox
+try:
+    metadata, res = dbx.files_download(excel_path)
+    # Lire le contenu Excel avec pandas
+    df = pd.read_excel(BytesIO(res.content))
+    st.dataframe(df, use_container_width=True)
+except dropbox.exceptions.ApiError as e:
+    st.error(f"Erreur lors du téléchargement du fichier : {e}")
+except Exception as e:
+    st.error(f"Erreur inconnue : {e}")
+
