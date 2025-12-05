@@ -409,3 +409,4 @@ if show_stock_detail:
     )
 
     st.altair_chart(chart_stk, use_container_width=True)
+
