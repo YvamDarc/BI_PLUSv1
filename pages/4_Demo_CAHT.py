@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 
-st.set_page_config(page_title="Démo CAHT – 5 affichages", layout="wide")
+st.set_page_config(page_title="Démo CAHT – Variantes d’affichage", layout="wide")
 
-st.title("📊 Démo d'affichages pour le CA HT (2023 / 2024)")
+st.title("📊 Démo CA HT 2023 / 2024 – 5 variantes d’affichage")
 
 st.markdown(
     """
@@ -15,7 +15,7 @@ st.markdown(
     - Détail 2023 : 5 000 € (7071), 4 000 € (7072)  
     - Détail 2024 : 6 000 € (7071), 4 000 € (7072)  
 
-    Variation calculée en **montant** et en **%**, avec plusieurs idées de présentation.
+    🔎 Objectif : comparer plusieurs façons d'afficher **la synthèse + le détail cliquable**.
     """
 )
 
@@ -32,153 +32,48 @@ data = pd.DataFrame([
 
 pivot = data.pivot(index="compte", columns="année", values="CA").reset_index()
 pivot["var_montant"] = pivot[2024] - pivot[2023]
-pivot["var_pourcent"] = (pivot["var_montant"] / pivot[2023]).replace([float("inf"), -float("inf")], 0) * 100
+pivot["var_pourcent"] = (pivot["var_montant"] / pivot[2023]) * 100
 
 total_2023 = data.loc[data["année"] == 2023, "CA"].sum()
 total_2024 = data.loc[data["année"] == 2024, "CA"].sum()
 total_var_montant = total_2024 - total_2023
 total_var_pourcent = (total_var_montant / total_2023) * 100
 
-pivot_affichage = pivot.copy()
-pivot_affichage.rename(columns={2023: "CA 2023", 2024: "CA 2024"}, inplace=True)
-pivot_affichage["Var montant"] = pivot_affichage["var_montant"]
-pivot_affichage["Var %"] = pivot_affichage["var_pourcent"].round(1)
+pivot_aff = pivot.rename(columns={2023: "CA 2023", 2024: "CA 2024"})
+pivot_aff["Var montant"] = pivot_aff["var_montant"]
+pivot_aff["Var %"] = pivot_aff["var_pourcent"].round(1)
+
+# Petite fonction utilitaire pour formater les montants
+fmt = lambda x: f"{x:,.0f} €".replace(",", " ")
+
 
 # =========================
-# Proposition 1 – Tuiles KPI + détail en expander
+# Variante 1 – KPI global + tableau + expander par compte
 # =========================
 
-st.header("1️⃣ Tuiles KPI + détail en volet déroulant")
+st.header("1️⃣ KPI global + tableau récap + expander par compte")
 
 col1, col2, col3 = st.columns(3)
+col1.metric("CA 2023", fmt(total_2023))
+col2.metric("CA 2024", fmt(total_2024))
+col3.metric("Variation", fmt(total_var_montant), f"{total_var_pourcent:.1f} %")
 
-col1.metric("CA 2023", f"{total_2023:,.0f} €".replace(",", " "), "")
-col2.metric("CA 2024", f"{total_2024:,.0f} €".replace(",", " "), "")
-col3.metric(
-    "Variation",
-    f"{total_var_montant:,.0f} €".replace(",", " "),
-    f"{total_var_pourcent:.1f} %",
+st.subheader("Tableau récapitulatif par compte")
+st.dataframe(
+    pivot_aff[["compte", "CA 2023", "CA 2024", "Var montant", "Var %"]],
+    use_container_width=True,
 )
 
-with st.expander("👀 Voir le détail par compte (tableau)"):
-    st.dataframe(
-        pivot_affichage[["compte", "CA 2023", "CA 2024", "Var montant", "Var %"]],
-        use_container_width=True,
-    )
+st.markdown("**Détail cliquable par compte :**")
 
-# =========================
-# Proposition 2 – Barres comparatives + tableau qui se révèle
-# =========================
-
-st.header("2️⃣ Barres comparatives globales + détail en dessous")
-
-chart_total = alt.Chart(
-    pd.DataFrame(
-        {
-            "Année": ["2023", "2024"],
-            "CA": [total_2023, total_2024],
-        }
-    )
-).mark_bar().encode(
-    x=alt.X("Année:N"),
-    y=alt.Y("CA:Q"),
-    tooltip=["Année", "CA"],
-)
-
-st.altair_chart(chart_total, use_container_width=True)
-
-if st.toggle("📂 Afficher le détail par compte (tableau)"):
-    st.dataframe(
-        pivot_affichage[["compte", "CA 2023", "CA 2024", "Var montant", "Var %"]],
-        use_container_width=True,
-    )
-
-# =========================
-# Proposition 3 – Tabs : synthèse / détail / variations
-# =========================
-
-st.header("3️⃣ Onglets (tabs) : Synthèse / Détail / Variations")
-
-tab1, tab2, tab3 = st.tabs(["Vue synthèse", "Détail comptes", "Variations"])
-
-with tab1:
-    st.subheader("Synthèse globale")
-    col1, col2 = st.columns(2)
-    col1.metric("CA 2023", f"{total_2023:,.0f} €".replace(",", " "))
-    col2.metric("CA 2024", f"{total_2024:,.0f} €".replace(",", " "))
-    st.metric(
-        "Variation globale",
-        f"{total_var_montant:,.0f} €".replace(",", " "),
-        f"{total_var_pourcent:.1f} %",
-    )
-
-with tab2:
-    st.subheader("Détail par compte (barres empilées)")
-    chart_detail = alt.Chart(data).mark_bar().encode(
-        x="année:O",
-        y="CA:Q",
-        color="compte:N",
-        tooltip=["année", "compte", "CA"],
-    )
-    st.altair_chart(chart_detail, use_container_width=True)
-
-with tab3:
-    st.subheader("Variations par compte")
-    st.dataframe(
-        pivot_affichage[["compte", "CA 2023", "CA 2024", "Var montant", "Var %"]],
-        use_container_width=True,
-    )
-
-# =========================
-# Proposition 4 – Sélecteur de compte + drill-down instantané
-# =========================
-
-st.header("4️⃣ Sélecteur de compte + drill-down")
-
-compte_sel = st.selectbox(
-    "Choisir un compte à analyser",
-    pivot_affichage["compte"].unique(),
-)
-
-row = pivot_affichage[pivot_affichage["compte"] == compte_sel].iloc[0]
-
-c1, c2, c3 = st.columns(3)
-c1.metric("CA 2023", f"{row['CA 2023']:,.0f} €".replace(",", " "))
-c2.metric("CA 2024", f"{row['CA 2024']:,.0f} €".replace(",", " "))
-c3.metric(
-    "Variation",
-    f"{row['Var montant']:,.0f} €".replace(",", " "),
-    f"{row['Var %']:.1f} %",
-)
-
-df_compte = data[data["compte"] == compte_sel]
-chart_compte = alt.Chart(df_compte).mark_bar().encode(
-    x="année:O",
-    y="CA:Q",
-    tooltip=["année", "CA"],
-)
-st.altair_chart(chart_compte, use_container_width=True)
-
-# =========================
-# Proposition 5 – Vue “tableau + détail en expander par ligne”
-# =========================
-
-st.header("5️⃣ Tableau récap + expander par ligne")
-
-st.markdown("Clique sur une ligne pour voir le détail du compte.")
-
-for _, r in pivot_affichage.iterrows():
+for _, r in pivot_aff.iterrows():
     with st.expander(
         f"Compte {r['compte']} – CA 2023 : {r['CA 2023']:.0f} €, CA 2024 : {r['CA 2024']:.0f} €"
     ):
         c1, c2, c3 = st.columns(3)
-        c1.metric("CA 2023", f"{r['CA 2023']:,.0f} €".replace(",", " "))
-        c2.metric("CA 2024", f"{r['CA 2024']:,.0f} €".replace(",", " "))
-        c3.metric(
-            "Variation",
-            f"{r['Var montant']:,.0f} €".replace(",", " "),
-            f"{r['Var %']:.1f} %",
-        )
+        c1.metric("CA 2023", fmt(r["CA 2023"]))
+        c2.metric("CA 2024", fmt(r["CA 2024"]))
+        c3.metric("Variation", fmt(r["Var montant"]), f"{r['Var %']:.1f} %")
 
         df_compte = data[data["compte"] == r["compte"]]
         chart = alt.Chart(df_compte).mark_bar().encode(
@@ -187,3 +82,161 @@ for _, r in pivot_affichage.iterrows():
             tooltip=["année", "CA"],
         )
         st.altair_chart(chart, use_container_width=True)
+
+
+# =========================
+# Variante 2 – KPI global + onglets (Synthèse / Détail / Graphique)
+# =========================
+
+st.header("2️⃣ KPI global + onglets synthèse / détail / graphique")
+
+col1, col2, col3 = st.columns(3)
+col1.metric("CA 2023", fmt(total_2023))
+col2.metric("CA 2024", fmt(total_2024))
+col3.metric("Variation", fmt(total_var_montant), f"{total_var_pourcent:.1f} %")
+
+tab1, tab2, tab3 = st.tabs(["Synthèse", "Détail par compte", "Graphique global"])
+
+with tab1:
+    st.subheader("Vue synthèse")
+    st.write("Variation globale du chiffre d'affaires.")
+    chart_total = alt.Chart(
+        pd.DataFrame({"Année": ["2023", "2024"], "CA": [total_2023, total_2024]})
+    ).mark_bar().encode(
+        x="Année:N",
+        y="CA:Q",
+        tooltip=["Année", "CA"],
+    )
+    st.altair_chart(chart_total, use_container_width=True)
+
+with tab2:
+    st.subheader("Détail par compte")
+    st.dataframe(
+        pivot_aff[["compte", "CA 2023", "CA 2024", "Var montant", "Var %"]],
+        use_container_width=True,
+    )
+
+with tab3:
+    st.subheader("Graphique empilé par compte")
+    chart_detail = alt.Chart(data).mark_bar().encode(
+        x="année:O",
+        y="CA:Q",
+        color="compte:N",
+        tooltip=["année", "compte", "CA"],
+    )
+    st.altair_chart(chart_detail, use_container_width=True)
+
+
+# =========================
+# Variante 3 – KPI global + sélecteur de compte + expander de détail
+# =========================
+
+st.header("3️⃣ KPI global + sélecteur de compte + volet de détail")
+
+col1, col2, col3 = st.columns(3)
+col1.metric("CA 2023", fmt(total_2023))
+col2.metric("CA 2024", fmt(total_2024))
+col3.metric("Variation", fmt(total_var_montant), f"{total_var_pourcent:.1f} %")
+
+compte_sel = st.selectbox(
+    "Choisir un compte à analyser :", pivot_aff["compte"].unique()
+)
+
+row = pivot_aff[pivot_aff["compte"] == compte_sel].iloc[0]
+
+c1, c2, c3 = st.columns(3)
+c1.metric("CA 2023", fmt(row["CA 2023"]))
+c2.metric("CA 2024", fmt(row["CA 2024"]))
+c3.metric("Variation", fmt(row["Var montant"]), f"{row['Var %']:.1f} %")
+
+with st.expander(f"Détail pour le compte {compte_sel}"):
+    df_compte = data[data["compte"] == compte_sel]
+    st.write("Historique par année :")
+    st.dataframe(df_compte, use_container_width=True)
+
+    chart = alt.Chart(df_compte).mark_bar().encode(
+        x="année:O",
+        y="CA:Q",
+        tooltip=["année", "CA"],
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
+# =========================
+# Variante 4 – Deux colonnes : à gauche synthèse, à droite expanders
+# =========================
+
+st.header("4️⃣ Deux colonnes : synthèse à gauche, détail cliquable à droite")
+
+colL, colR = st.columns([1, 2])
+
+with colL:
+    st.subheader("Synthèse globale")
+    st.metric("CA 2023", fmt(total_2023))
+    st.metric("CA 2024", fmt(total_2024))
+    st.metric("Variation", fmt(total_var_montant), f"{total_var_pourcent:.1f} %")
+
+    chart_total2 = alt.Chart(
+        pd.DataFrame({"Année": ["2023", "2024"], "CA": [total_2023, total_2024]})
+    ).mark_bar().encode(
+        x="Année:N",
+        y="CA:Q",
+    )
+    st.altair_chart(chart_total2, use_container_width=True)
+
+with colR:
+    st.subheader("Comptes – détail cliquable")
+    for _, r in pivot_aff.iterrows():
+        with st.expander(
+            f"Compte {r['compte']} – Var {fmt(r['Var montant'])} ({r['Var %']:.1f} %)"
+        ):
+            c1, c2, c3 = st.columns(3)
+            c1.metric("CA 2023", fmt(r["CA 2023"]))
+            c2.metric("CA 2024", fmt(r["CA 2024"]))
+            c3.metric("Variation", fmt(r["Var montant"]), f"{r['Var %']:.1f} %")
+
+            df_compte = data[data["compte"] == r["compte"]]
+            chart = alt.Chart(df_compte).mark_bar().encode(
+                x="année:O",
+                y="CA:Q",
+                tooltip=["année", "CA"],
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+
+# =========================
+# Variante 5 – Vue “liste interactive” : tableau + expander synchronisé
+# =========================
+
+st.header("5️⃣ Tableau interactif + expander synchronisé")
+
+col1, col2, col3 = st.columns(3)
+col1.metric("CA 2023", fmt(total_2023))
+col2.metric("CA 2024", fmt(total_2024))
+col3.metric("Variation", fmt(total_var_montant), f"{total_var_pourcent:.1f} %")
+
+st.write("Sélectionne un compte dans le tableau, puis ouvre le volet de détail.")
+
+st.dataframe(
+    pivot_aff[["compte", "CA 2023", "CA 2024", "Var montant", "Var %"]],
+    use_container_width=True,
+)
+
+compte_detail = st.selectbox(
+    "Compte à détailler :", pivot_aff["compte"].unique(), key="detail_select"
+)
+row2 = pivot_aff[pivot_aff["compte"] == compte_detail].iloc[0]
+
+with st.expander(f"Détail du compte {compte_detail}", expanded=True):
+    c1, c2, c3 = st.columns(3)
+    c1.metric("CA 2023", fmt(row2["CA 2023"]))
+    c2.metric("CA 2024", fmt(row2["CA 2024"]))
+    c3.metric("Variation", fmt(row2["Var montant"]), f"{row2['Var %']:.1f} %")
+
+    df_compte = data[data["compte"] == compte_detail]
+    chart = alt.Chart(df_compte).mark_bar().encode(
+        x="année:O",
+        y="CA:Q",
+        tooltip=["année", "CA"],
+    )
+    st.altair_chart(chart, use_container_width=True)
